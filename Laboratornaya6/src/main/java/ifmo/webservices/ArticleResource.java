@@ -53,12 +53,17 @@ public class ArticleResource {
     @POST
     @Consumes({MediaType.APPLICATION_JSON})
     @Produces({MediaType.APPLICATION_JSON})
-    public int addArticle(Article Article)
+    public int addArticle(Article Article,  @HeaderParam("authorization") String authString)
             throws IllegalNameException,
             IllegalAuthorException,
             IllegalPagesException,
-            IllegalYearException, DatabaseException {
+            IllegalSomething,
+            IllegalYearException,
+            DatabaseException,
+            UnauthorizedException,
+            ForbiddenException {
         try {
+            checkAuthenticated(authString);
             checkName(Article.getName());
             checkAuthor(Article.getAuthor());
             checkPages(Article.getPages());
@@ -74,14 +79,17 @@ public class ArticleResource {
 
     @PUT
     @Consumes({MediaType.APPLICATION_JSON})
-    public boolean modifyArticle(Article Article)
+    public boolean modifyArticle(Article Article, @HeaderParam("authorization") String authString)
             throws IllegalNameException,
             IllegalAuthorException,
             IllegalPagesException,
+            IllegalSomething,
             IllegalYearException,
-            ArticleNotFoundException, DatabaseException {
-
+            DatabaseException,
+            UnauthorizedException,
+            ForbiddenException {
         try {
+            checkAuthenticated(authString);
             checkName(Article.getName());
             checkAuthor(Article.getAuthor());
             checkPages(Article.getPages());
@@ -128,9 +136,14 @@ public class ArticleResource {
 
 
     @DELETE
-    public boolean deleteArticle(@QueryParam("id") int id) throws ArticleNotFoundException, DatabaseException {
+    public boolean deleteArticle(@QueryParam("id") int id, @HeaderParam("authorization") String authString)
+	  throws ArticleNotFoundException,
+            DatabaseException,
+            UnauthorizedException,
+            ForbiddenException {
         try {
             OracleSQLDAO dao = new OracleSQLDAO(ConnectionUtil.getConnection());
+            checkAuthenticated(authString);
             checkExists(dao, id);
             return dao.deleteArticle(id);
         } catch (SQLException e) {
@@ -168,6 +181,27 @@ public class ArticleResource {
     protected void checkYear(int year) throws IllegalYearException {
         if (year <= 0) {
             throw new IllegalYearException("Year should be greater than zero");
+        }
+    }
+
+    protected void checkAuthenticated(String authString) throws UnauthorizedException, ForbiddenException {
+        if (authString == null || authString.equals("")) {
+            throw new UnauthorizedException("Authorization required for CRUD operations");
+        }
+
+        try {
+            String[] authParts = authString.split("\\s+");
+            String authInfo = authParts[1];
+
+            String decodedString = new String(Base64.getDecoder().decode(authInfo));
+
+            authParts = decodedString.split(":");
+
+            if (!authParts[0].equals(login) || !authParts[1].equals(password)) {
+                throw new ForbiddenException("Wrong login/password");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new ForbiddenException("Wrong login/password");
         }
     }
 }

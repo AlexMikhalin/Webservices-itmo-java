@@ -224,7 +224,9 @@ public class WebServiceClient {
             WebResource webResource = client.resource(this.url);
             webResource = webResource.queryParam("id", String.valueOf(id));
 
-            ClientResponse response = webResource.delete(ClientResponse.class);
+            ClientResponse response = webResource
+            .header("Authorization", getAuthHeader())
+            .delete(ClientResponse.class);
             if (response.getStatus() != ClientResponse.Status.OK.getStatusCode()) {
                 throw new IllegalStateException("Request failed");
             }
@@ -254,8 +256,9 @@ public class WebServiceClient {
             body.put("id", id);
 
             ClientResponse response = webResource
-                    .type(MediaType.APPLICATION_JSON)
-                    .put(ClientResponse.class, body);
+            .header("Authorization", getAuthHeader())
+            .type(MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class, body);
 
             if (response.getStatus() != ClientResponse.Status.OK.getStatusCode()) {
                 throw new IllegalStateException("Request failed");
@@ -373,5 +376,11 @@ public class WebServiceClient {
             System.out.println(Article);
         }
         System.out.println("Total Articles: " + Articles.size());
+    }
+
+    private String getAuthHeader() {
+        String authString = login + ":" + password;
+        String authStringEnc = Base64.getEncoder().encodeToString(authString.getBytes());
+        return "Basic " + authStringEnc;
     }
 }
