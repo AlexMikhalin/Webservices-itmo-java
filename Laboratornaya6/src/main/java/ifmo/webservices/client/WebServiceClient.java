@@ -18,12 +18,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-enum MenuOption {AddField, Add, Delete, Modify, Print, Clear, Find, Exit}
+enum MenuOption {AddField, Add, Delete, Modify, Print, Clear, Find, Exit, Upload}
 
 public class WebServiceClient {
 
     private static final String standaloneUrl = "http://localhost:8081/rest/Articles";
-
+    
+    private static final String login = "hardcode123";
+    private static final String password = "hardcode123";
+	
     private Client client;
     private String url;
 
@@ -116,6 +119,8 @@ public class WebServiceClient {
             case Clear:
                 clearConditions();
                 break;
+            case Upload:
+                uploadFile(in);    
             case Exit:
                 exit();
                 break;
@@ -138,6 +143,8 @@ public class WebServiceClient {
                 return "Print saved conditions";
             case Clear:
                 return "Clear saved conditions";
+            case Upload:
+                return "Upload file";    
             case Exit:
                 return "Exit";
             default:
@@ -266,6 +273,33 @@ public class WebServiceClient {
         }
     }
 
+
+   private void uploadFile(BufferedReader in) throws IOException {
+        System.out.println("Print file path:");
+        String path = in.readLine();
+
+        try {
+            FileDataBodyPart filePart = new FileDataBodyPart("file", new File(path));
+            MultiPart multipartEntity = new FormDataMultiPart().bodyPart(filePart);
+
+            WebResource webResource = client.resource(this.url + "/upload");
+            ClientResponse response = webResource
+                    .header("Authorization", getAuthHeader())
+                    .type(MediaType.MULTIPART_FORM_DATA_TYPE)
+                    .post(ClientResponse.class, multipartEntity);
+
+            GenericType<Boolean> type = new GenericType<Boolean>() {};
+            boolean success = response.getEntity(type);
+            if (success) {
+                System.out.println("File uploaded");
+            } else {
+                System.out.println("File upload failed");
+            }
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+    }
+	
     private int findArticleById(BufferedReader in) throws IOException {
         System.out.println("Print id:");
         int id = readIntValue(in);

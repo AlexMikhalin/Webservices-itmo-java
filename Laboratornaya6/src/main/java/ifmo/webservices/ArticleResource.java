@@ -1,7 +1,11 @@
 package ifmo.webservices;
 
+import com.sun.jersey.multipart.FormDataParam;
 import ifmo.webservices.errors.*;
 
+import ifmo.webservices.errors.ForbiddenException;
+import java.io.*;
+import java.nio.file.Files;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,10 +13,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Path("/Articles")
 @Produces({MediaType.APPLICATION_JSON})
 public class ArticleResource {
+	
+    private static final String login = "hardcode123";
+    private static final String password = "hardcode123";
+	
     @GET
     public List<Article> getArticles(
             @QueryParam("author") String author,
@@ -94,6 +104,28 @@ public class ArticleResource {
             throw new DatabaseException(e.getMessage());
         }
     }
+
+    @POST
+    @Path("/upload")
+    @Consumes({MediaType.MULTIPART_FORM_DATA})
+    public boolean uploadFileWithData(
+            @FormDataParam("file") InputStream fileInputStream,
+            @HeaderParam("authorization") String authString) throws UnauthorizedException, ForbiddenException {
+
+        checkAuthenticated(authString);
+
+        try {
+            File file = new File("src/main/resources/" +
+                    new SimpleDateFormat("ddMMyy-hhmmss.SSS").format(new Date()));
+
+            Files.copy(fileInputStream, file.toPath());
+        } catch (IOException e) {
+            Logger.getLogger(OracleSQLDAO.class.getName()).log(Level.SEVERE, null, e);
+			return false;
+        }
+        return true;
+    }
+
 
     @DELETE
     public boolean deleteArticle(@QueryParam("id") int id) throws ArticleNotFoundException, DatabaseException {
